@@ -16,15 +16,15 @@
 </head>
 
 <body>
-
+<div class="container text-center">
   <h1 class="text-center">Appointment Booked</h1>
 
-<div class="circle-loader text-center">
-  <div class="checkmark draw text-center"></div>
-</div>
+  <div class="circle-loader text-center">
+    <div class="checkmark draw text-center"></div>
+  </div>
 
-<p><button id="toggle" type="button" class="btn btn-success">Toggle Completed</button></p>
-  
+  <p><a href="https://www.octangl.com"><button id="toggle" type="button" class="btn btn-success">Go Back</button></a></p>
+</div>
 <script src='assets/js/jquery.min.js'></script>
 <script  src='assets/js/main.js'></script>
 <script src="assets/js/loader-js.js"></script>

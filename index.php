@@ -1,4 +1,199 @@
 <?php ini_set("display_errors", 1); ?>
+<?php
+      require_once('form_handler.php');
+      require_once('AfricasTalkingGateway.php');
+
+      function test_input($data) {
+        $data = trim($data);
+        $data = stripslashes($data);
+        $data = htmlspecialchars($data);
+        return $data;
+      }
+      // define variables and set to empty values
+      $fnameErr = $lnameErr = $emailErr = $messageErr = "";
+      $fname = $lname = $email = $message = "";
+      $nameErr = $dateErr = $salonErr = $phoneErr = "";
+      $name = $date = $salon = $phone = "";
+
+      if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $selectedSalon = $_POST['choicesalons'];
+        if ($selectedSalon == "default"){
+          $salonErr = "Select a Salon";
+        } else{
+          $selectedSalon = $_POST['choicesalons'];
+        }
+        $selectedHairstyle = isset($_POST["hairstyles"]) ? $_POST["hairstyles"] : '';
+        if (empty($_POST["name"])) {
+          $nameErr = "Name is required";
+        } else {
+          $name = test_input($_POST["name"]);
+          // check if name only contains letters and whitespace
+          if (!preg_match("/^[a-zA-Z ]*$/",$name)) {
+            $nameErr = "Only letters and white space allowed";
+          }
+        }
+        if (empty($_POST["date"])) {
+          $dateErr = "Date is required";
+        } else {
+          $date = test_input($_POST["date"]);
+        }
+        if (empty($_POST["phone"])) {
+          $phoneErr = "Phone is required";
+        } else {
+          $phone = test_input($_POST["phone"]);
+          // check if e-mail address is well-formed
+          if (!preg_match('/^[0-9]/', $phone)) {
+            $phoneErr = "Invalid phone format";
+          }
+          //header('Location: /success.php');
+        }
+
+
+        // Specify your authentication credentials
+        $username   = "sandbox";
+        $apikey     = "1809dc7e66f06c69fd65f0294a8a1b51f50ac9a0b107d34a8f7095cfbcb155d9";
+        // Specify the numbers that you want to send to in a comma-separated list
+        // Please ensure you include the country code (+234 for Nigeria in this case)
+        $recipients = $phone;
+        // And of course we want our recipients to know what we really do
+        $message    = "I'm a lumberjack and its ok, I sleep all night and I work all day";
+        // Create a new instance of our awesome gateway class
+        $gateway    = new AfricasTalkingGateway($username, $apikey);
+        /*************************************************************************************
+          NOTE: If connecting to the sandbox:
+          1. Use "sandbox" as the username
+          2. Use the apiKey generated from your sandbox application
+            https://account.africastalking.com/apps/sandbox/settings/key
+          3. Add the "sandbox" flag to the constructor
+          $gateway  = new AfricasTalkingGateway($username, $apiKey, "sandbox");
+        **************************************************************************************/
+        // Any gateway error will be captured by our custom Exception class below, 
+        // so wrap the call in a try-catch block
+        try 
+        { 
+          // Thats it, hit send and we'll take care of the rest. 
+          $results = $gateway->sendMessage($recipients, $message);
+                    
+          foreach($results as $result) {
+            // status is either "Success" or "error message"
+            echo " Number: " .$result->number;
+            echo " Status: " .$result->status;
+            echo " StatusCode: " .$result->statusCode;
+            echo " MessageId: " .$result->messageId;
+            echo " Cost: "   .$result->cost."\n";
+          }
+        }
+        catch ( AfricasTalkingGatewayException $e )
+        {
+          echo "Encountered an error while sending: ".$e->getMessage();
+        }
+        /*function sendMail($name, $selectedSalon, $date, $phone, $selectedHairstyle) {
+        
+          $to = "princekelvin91@gmail.com";
+          $subject = "New Appointment Booked On Octangl";
+          $txt = $name . " just booked an appointment with " . $selectedSalon . " for a hair-do on " . $date . " ." . "Phone Number: " . $phone . " Choice hairstyle: " . $selectedHairstyle;
+          $headers = "From: octangl.com";
+      
+          mail($to,$subject,$txt,$headers);
+        }
+        sendMail($name, $selectedSalon, $date, $phone, $selectedHairstyle);*/
+      }elseif(isset($_POST["submit2"])) {
+        function sendMailContact($message, $email) {
+          $to = "princekelvin91@gmail.com";
+          $subject = "New Interaction On Octangl";
+          $txt = $message;
+          $headers = "From: " . $email;
+          mail($to,$subject,$txt,$headers);
+        }
+        
+        if(! empty($_FILES["fileToUpload"]["tmp_name"])) {
+          $target_dir = "uploads/";
+          $target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+          $uploadOk = 1;
+          $imageFileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+
+          // echo "<pre>";
+          // var_export($_FILES["fileToUpload"]);
+          // echo "</pre>";
+          // exit();
+          // Check if image file is a actual image or fake image
+          $check = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
+
+          if($check !== false) {
+              $fileOk = "File is an image - " . $check["mime"] . ".";
+              $uploadOk = 1;
+          } else {
+              $fileErr = "File is not an image.";
+              $uploadOk = 0;
+          }
+
+          // Check if file already exists
+          if (file_exists($target_file)) {
+              $fileErr = "Sorry, file already exists.";
+              $uploadOk = 0;
+          }
+          // Check file size
+          if ($_FILES["fileToUpload"]["size"] > 500000) {
+              $fileErr = "Sorry, your file is too large.";
+              $uploadOk = 0;
+          }
+          // Allow certain file formats
+          if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg"
+          && $imageFileType != "gif" ) {
+              $fileErr = "Sorry, only JPG, JPEG, PNG & GIF files are allowed.";
+              $uploadOk = 0;
+          }
+          // Check if $uploadOk is set to 0 by an error
+          if ($uploadOk != 0) {
+            if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
+                  echo "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.";
+              } else {
+                $fileErr = "Sorry, there was an error uploading your file.";
+              }
+          }
+        }
+
+        if (empty($_POST["fname"])) {
+          $fnameErr = "First Name is required";
+        } else {
+          $fname = test_input($_POST["fname"]);
+          // check if name only contains letters and whitespace
+          if (!preg_match("/^[a-zA-Z ]*$/",$fname)) {
+            $fnameErr = "Only letters and white space allowed";
+          }
+        }
+      
+        if (empty($_POST["lname"])) {
+          $lnameErr = "Last Name is required";
+        } else {
+          $fname = test_input($_POST["lname"]);
+          // check if name only contains letters and whitespace
+          if (!preg_match("/^[a-zA-Z ]*$/",$lname)) {
+            $lnameErr = "Only letters and white space allowed";
+          }
+        }
+        
+        if (empty($_POST["email"])) {
+            $emailErr = "Email is required";
+        } else {
+          $email = test_input($_POST["email"]);
+          // check if e-mail address is well-formed
+          if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $emailErr = "Invalid email format";
+          }
+        }
+      
+        if (empty($_POST["message"])) {
+          $messageErr = "Message is required";
+        } else {
+          $message = test_input($_POST["message"]);
+        } 
+        
+        //sendMailContact($message, $email);
+        header('Location: /success.php');
+        die();
+    }
+?>
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -32,12 +227,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
 
 	</head>
-	<body>
-    
-
-
-
-
+	<body> 
     <nav class="navbar navbar-expand-lg navbar-dark probootstrap_navbar" id="probootstrap-navbar">
       <div class="container">
         <a class="navbar-brand" href="index.php">Octangl</a>
@@ -48,7 +238,6 @@
           <ul class="navbar-nav ml-auto">
             <li class="nav-item active"><a class="nav-link" href="index.php">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="#section-contact">Contact</a></li>
-            <li class="nav-item"><a class="nav-link" href="#section-Howitworks">How it works</a></li>
             <li>
               <div class="input-group margin-bottom-sm">
                 <input class="form-control" id="mysearch-bar" type="text" placeholder="Search For A Salon">
@@ -83,25 +272,10 @@
           
 
           <div class="col-md probootstrap-animate " id="booking-form">
-          <form id="ajax-contact" method="post" 
-          action="form_handler.php"> 
+          <form method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>"> 
               <div class="form-group">
                 <div class="row mb-3">
-                
-                <div class="container" id="loaderModal">
-                  <div class="container text-center loader-content">
-                    <a href="#"><span class="hide">X</span></a>
-                    <h1 class="text-center">Appointment Booked</h1>
-
-                    <div class="circle-loader text-center">
-                      <div class="checkmark draw text-center"></div>
-                    </div>
-
-                    <p><button id="toggle" type="button" class="btn btn-success">Close</button></p>
-                  </div>
-                </div>
-
-                  
+ 
                 <div class="col-md">
                       <label for="id_label_single" style="color:white;"><strong>SELECT YOUR CHOICE SALON</strong></label>
 
@@ -112,16 +286,16 @@
                           <option value="Hair Wizard">Hair Wizard</option>
                         </select>
                       </label>
-                     <!-- <span class="error">* <?php echo $salonErr;?></span>-->
+                     <span class="error">* <?php echo $salonErr;?>
                   </div>
                   <div class="col-md">
                     <div class="form-group">
                       <label for="probootstrap-date-departure" style="color:white;"><strong>CREATE APPOINTMENT</strong></label>
                         <div class="probootstrap-date-wrap">
                           <span class="icon ion-calendar"></span> 
-                          <input type="text" id="probootstrap-date-departure" name="date" class="form-control" placeholder="Schedule Your Hair-Do" required>
+                          <input type="text" id="probootstrap-date-departure" name="date" class="form-control" placeholder="Schedule Your Hair-Do">
                         </div>
-                        <!--<span class="error">* <?php echo $dateErr;?></span>-->
+                        <span class="error">* <?php echo $dateErr;?></span>
                       </div>
                     </div>
                   </div>
@@ -130,15 +304,15 @@
                   <div class="col-md-6">
                       <div class="form-group">
                         <label for="probootstrap-date-departure" style="color:white;"><strong>NAME</strong></label>
-                        <input type="text" class="form-control" id="name"  name="name" placeholder="Name" required>
-                        <!--<span class="error">* <?php echo $nameErr;?></span>-->
+                        <input type="text" class="form-control" id="name"  name="name" placeholder="Name">
+                        <span class="error">* <?php echo $nameErr;?></span>
                       </div>
                   </div>
                   <div class="col-md-6">
                     <div class="form-group">
                           <label for="probootstrap-date-departure" style="color:white;"><strong>PHONE</strong></label>
-                          <input type="text" class="form-control" id="phone"  name="phone" placeholder="Phone" required>
-                          <!--<span class="error">* <?php echo $phoneErr;?></span>-->
+                          <input type="text" class="form-control" id="phone"  name="phone" placeholder="Phone">
+                          <span class="error">* <?php echo $phoneErr;?></span>
                         </div>
                     </div> 
                 </div>
@@ -219,22 +393,6 @@
         </div>
       </div>
     
-    </section>
-    <!-- END section -->
-
-    <section class="probootstrap_section" id="section-Howitworks">
-      <div class="container">
-        <div class="row justify-content-center mb-5">
-          <div class="col-md-12 text-center mb-5 probootstrap-animate">
-            <h2 class="display-4 border-bottom probootstrap-section-heading">How it works</h2>
-            <blockquote class="">
-              <p class="lead mb-4"><em>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts. Separated they live in Bookmarksgrove right at the coast of the Semantics, a large language ocean. A small river named Duden flows by their place and supplies it with the necessary regelialia. It is a paradisematic country, in which roasted parts of sentences fly into your mouth.</em></p>
-            </blockquote>
-
-          </div>
-        </div>
-        
-      </div>
     </section>
     <!-- END section -->
 
@@ -437,7 +595,7 @@
                   <div class="text-center">
                     <div class="form-group">
                       <input type="file" name="fileToUpload" id="fileToUpload">
-                      <span class="error">* <?php echo isset($fileErr) ? $fileErr : '' ;?></span>
+                      <span class="error"> <?php echo isset($fileErr) ? $fileErr : '' ;?></span>
                     </div>
                   </div>
                 </div>
@@ -506,7 +664,7 @@
     <script src="assets/js/select2.min.js"></script>
 
     <script src="assets/js/main.js"></script>
-    <script src="assets/js/form_handler.js"></script>
+   <!-- <script src="assets/js/form_handler.js"></script> -->
     
 	</body>
 </html>
