@@ -58,7 +58,7 @@ class AfricasTalkingGateway
   public function sendMessage($to_, $message_, $from_ = null, $bulkSMSMode_ = 1, Array $options_ = array())
   {
     if ( strlen($to_) == 0 || strlen($message_) == 0 ) {
-      throw new AfricasTalkingGatewayException('Please supply both to and message parameters');
+      throw new AfricasTalkingGatewayException('FIll Out All Fields!');
     }
     
     $params = array(

@@ -70,6 +70,22 @@ input, textarea, p {
   padding: 0 2px;
 }
 
+#smserror {
+  padding: 15px 15px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .25em;
+  font-weight: 400;
+}
+
+#contacterror {
+  padding: 15px 15px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .25em;
+  font-weight: 400;
+}
+
 /* Create four equal columns that sits next to each other */
 .hair-column {
   flex: 25%;

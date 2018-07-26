@@ -1,6 +1,6 @@
 <?php ini_set("display_errors", 1); ?>
 <?php
-      require_once('form_handler.php');
+      //require_once('form_handler.php');
       require_once('AfricasTalkingGateway.php');
 
       function test_input($data) {
@@ -10,12 +10,12 @@
         return $data;
       }
       // define variables and set to empty values
-      $fnameErr = $lnameErr = $emailErr = $messageErr = "";
-      $fname = $lname = $email = $message = "";
+      $fnameErr = $lnameErr = $emailErr = $contactMessageErr = $sendMessageErr = $formMessageErr =  "";
+      $fname = $lname = $email = $contactMessage = $fileName = "";
       $nameErr = $dateErr = $salonErr = $phoneErr = "";
       $name = $date = $salon = $phone = "";
 
-      if ($_SERVER["REQUEST_METHOD"] == "POST") {
+      if (isset($_POST["submit"])) {
         $selectedSalon = $_POST['choicesalons'];
         if ($selectedSalon == "default"){
           $salonErr = "Select a Salon";
@@ -42,21 +42,28 @@
         } else {
           $phone = test_input($_POST["phone"]);
           // check if e-mail address is well-formed
-          if (!preg_match('/^[0-9]/', $phone)) {
-            $phoneErr = "Invalid phone format";
+          if (!preg_match('/^[+][0-9]*$/', $phone)){
+            $phoneErr = "Country code '+234' missing!";
           }
-          //header('Location: /success.php');
-        }
+        }  
 
-
+        
+          /*SMS handling API*/
         // Specify your authentication credentials
-        $username   = "sandbox";
-        $apikey     = "1809dc7e66f06c69fd65f0294a8a1b51f50ac9a0b107d34a8f7095cfbcb155d9";
+        $message = "";
+        $username   = "Octangl";
+        $apikey     = "a7e467cf0ddf3c91f70ffa7f06d101d5e4f520a24ea950420cbb7297921caaba";
         // Specify the numbers that you want to send to in a comma-separated list
         // Please ensure you include the country code (+234 for Nigeria in this case)
-        $recipients = $phone;
-        // And of course we want our recipients to know what we really do
-        $message    = "I'm a lumberjack and its ok, I sleep all night and I work all day";
+        $recipients = "+2348166879424";
+
+        if (! empty($name && $date && $phone && $selectedSalon != "default")){
+          // And of course we want our recipients to know what we really do
+          $message    = $name . " just booked an appointment with " . $selectedSalon . " for a hair-do on " . $date . " ." . "Phone Number: " . $phone . " Choice hairstyle: " . $selectedHairstyle;
+        } else {
+          $sendMessageErr = "Fill Out All Fields!";
+        }
+        
         // Create a new instance of our awesome gateway class
         $gateway    = new AfricasTalkingGateway($username, $apikey);
         /*************************************************************************************
@@ -76,17 +83,22 @@
                     
           foreach($results as $result) {
             // status is either "Success" or "error message"
-            echo " Number: " .$result->number;
-            echo " Status: " .$result->status;
-            echo " StatusCode: " .$result->statusCode;
-            echo " MessageId: " .$result->messageId;
-            echo " Cost: "   .$result->cost."\n";
+            $recipientNumber = $result->number;
+            $sendMessageErr = $result->status;
+            if ($sendMessageErr == "Success"){
+              $sendMessageErr = "Appointment Booked";
+            }
+            $messageStatusCode = $result->statusCode;
+            $sentMessageId = $result->messageId;
+            $messageCost = $result->cost;
           }
         }
         catch ( AfricasTalkingGatewayException $e )
         {
-          echo "Encountered an error while sending: ".$e->getMessage();
+          $sendMessageErr = "Error: ".$e->getMessage();
         }
+      
+
         /*function sendMail($name, $selectedSalon, $date, $phone, $selectedHairstyle) {
         
           $to = "princekelvin91@gmail.com";
@@ -98,13 +110,6 @@
         }
         sendMail($name, $selectedSalon, $date, $phone, $selectedHairstyle);*/
       }elseif(isset($_POST["submit2"])) {
-        function sendMailContact($message, $email) {
-          $to = "princekelvin91@gmail.com";
-          $subject = "New Interaction On Octangl";
-          $txt = $message;
-          $headers = "From: " . $email;
-          mail($to,$subject,$txt,$headers);
-        }
         
         if(! empty($_FILES["fileToUpload"]["tmp_name"])) {
           $target_dir = "uploads/";
@@ -146,7 +151,8 @@
           // Check if $uploadOk is set to 0 by an error
           if ($uploadOk != 0) {
             if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-                  echo "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.";
+                  $fileErr = "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.";
+                  $fileName = basename( $_FILES["fileToUpload"]["name"]);
               } else {
                 $fileErr = "Sorry, there was an error uploading your file.";
               }
@@ -184,15 +190,60 @@
         }
       
         if (empty($_POST["message"])) {
-          $messageErr = "Message is required";
+          $contactMessageErr = "Message is required";
         } else {
-          $message = test_input($_POST["message"]);
-        } 
-        
+          $contactMessage = test_input($_POST["message"]);
+        }
+        /*SMS handling API*/
+        // Specify your authentication credentials
+        $message = "";
+        $username   = "Octangl";
+        $apikey     = "a7e467cf0ddf3c91f70ffa7f06d101d5e4f520a24ea950420cbb7297921caaba";
+        // Specify the numbers that you want to send to in a comma-separated list
+        // Please ensure you include the country code (+234 for Nigeria in this case)
+        $recipients = "+2348166879424";
+        if (! empty($fname && $lname && $contactMessage && $email)){
+          // And of course we want our recipients to know what we really do
+          $message = $fname . " " . $lname ." wrote via contact form: '" . $contactMessage . "' \nemail: " . $email . "\n" . "uploaded Image: " .$fileName;
+        } else {
+          $formMessageErr = "Fill Out All Fields!";
+        }
+        // Create a new instance of our awesome gateway class
+        $gateway    = new AfricasTalkingGateway($username, $apikey);
+        /*************************************************************************************
+          NOTE: If connecting to the sandbox:
+          1. Use "sandbox" as the username
+          2. Use the apiKey generated from your sandbox application
+            https://account.africastalking.com/apps/sandbox/settings/key
+          3. Add the "sandbox" flag to the constructor
+          $gateway  = new AfricasTalkingGateway($username, $apiKey, "sandbox");
+        **************************************************************************************/
+        // Any gateway error will be captured by our custom Exception class below, 
+        // so wrap the call in a try-catch block
+        try 
+        { 
+          // Thats it, hit send and we'll take care of the rest. 
+          $results = $gateway->sendMessage($recipients, $message);
+                    
+          foreach($results as $result) {
+            // status is either "Success" or "error message"
+            $recipientNumber = $result->number;
+            $formMessageErr = $result->status;
+            if ($formMessageErr == "Success"){
+              $formMessageErr = "Message Sent!";
+            }
+            $messageStatusCode = $result->statusCode;
+            $sentMessageId = $result->messageId;
+            $messageCost = $result->cost;
+          }
+        }
+        catch ( AfricasTalkingGatewayException $e )
+        {
+          $formMessageErr = "Error: ".$e->getMessage();
+        }
+    } 
         //sendMailContact($message, $email);
-        header('Location: /success.php');
-        die();
-    }
+    
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -201,7 +252,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 		<title>Octangl &mdash;Book Appointments With Proffesional Hair Salons</title>
-		<meta name="description" content="Largest Salon Directory and Booking Platform In Nigeria">
+		<meta name="description" content="Online Salon Booking Platform In Nigeria">
 		<meta name="keywords" content="hair salon, best salons in Nigeria, make my hair, where can i make my hair, salons in owerri">
     
     <link href="https://fonts.googleapis.com/css?family=Work+Sans:300,400,700" rel="stylesheet">
@@ -261,7 +312,7 @@
                 data-period="2000"
                 data-rotate='[ "be", "as", "beautiful"]'>
                 </span>-->
-                Don't wait for your turn, Be Bossy, Tell Them You're Coming!
+                Book An Appointment With A salon For Your Next Hair-Do!
             </h2>
             <p class="lead mb-5 probootstrap-animate">No More Waiting in cues to get your hair done, Get Prompt Attention On All Scheduled Visits </p>
            <!-- <p class="probootstrap-animate">
@@ -273,9 +324,27 @@
 
           <div class="col-md probootstrap-animate " id="booking-form">
           <form method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>"> 
-              <div class="form-group">
-                <div class="row mb-3">
- 
+            <div class="form-group">
+            <label class="btn btn-danger btn-block smserror" id="smserror"> 
+              <?php 
+                if ($sendMessageErr == ""){
+                  echo '<script type="text/javascript">
+                            document.getElementById("smserror").style.display = "none";  
+                  </script>';
+                }else if($sendMessageErr == "Appointment Booked"){
+                  echo '<script type="text/javascript">
+                      if ( document.getElementById("smserror").classList.contains("btn-danger") ){
+                        document.getElementById("smserror").classList.remove("btn-danger");
+                        document.getElementById("smserror").classList.add("btn-primary");
+                      }  
+                  </script>';
+                  echo '<i class="fa fa-check-circle-o" aria-hidden="true"></i> Appointment Booked!';
+                }else{
+                  echo $sendMessageErr;
+                }
+              ?>
+            </label>
+              <div class="row mb-3">
                 <div class="col-md">
                       <label for="id_label_single" style="color:white;"><strong>SELECT YOUR CHOICE SALON</strong></label>
 
@@ -564,6 +633,25 @@
           </div>
           <div class="col-md-6  probootstrap-animate">
             <form action="<?php echo $_SERVER['PHP_SELF'];?>" method="post" class="probootstrap-form probootstrap-form-box mb60" enctype="multipart/form-data">
+              <label class="btn btn-danger btn-block contacterror" id="contacterror"> 
+                      <?php 
+                        if ($formMessageErr == ""){
+                          echo '<script type="text/javascript">
+                                    document.getElementById("contacterror").style.display = "none";  
+                          </script>';
+                        }else if($formMessageErr == "Message Sent!"){
+                          echo '<script type="text/javascript">
+                              if ( document.getElementById("contacterror").classList.contains("btn-danger") ){
+                                document.getElementById("contacterror").classList.remove("btn-danger");
+                                document.getElementById("contacterror").classList.add("btn-primary");
+                              }  
+                          </script>';
+                          echo '<i class="fa fa-check-circle-o" aria-hidden="true"></i> Message Sent!';
+                        }else{
+                          echo $formMessageErr;
+                        }
+                      ?>
+                </label>
               <div class="row mb-3">
                 <div class="col-md-6">
                   <div class="form-group">
@@ -588,7 +676,7 @@
               <div class="form-group">
                 <label for="message" class="sr-only sr-only-focusable">Message</label>
                 <textarea cols="30" rows="10" class="form-control" id="message" name="message" placeholder="Write your message"></textarea>
-                <span class="error">* <?php echo $messageErr;?></span>
+                <span class="error">* <?php echo $contactMessageErr;?></span>
               </div>
               <div class="row mb-3">
                 <div class="col-md-12">
